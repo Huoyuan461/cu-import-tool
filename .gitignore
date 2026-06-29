@@ -1,0 +1,12 @@
+.DS_Store
+.venv/
+.playwright-cli/
+__pycache__/
+*.pyc
+outputs/
+tmp_test/
+video_frames/
+*.zip
+*.pptx
+*.log
+node_modules/

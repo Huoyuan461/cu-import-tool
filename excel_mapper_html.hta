@@ -1,0 +1,517 @@
+<!doctype html>
+<html>
+<head>
+  <meta http-equiv="X-UA-Compatible" content="IE=11" />
+  <meta charset="utf-8" />
+  <title>Excel产品数据自动提取与写入工具</title>
+  <HTA:APPLICATION
+    ID="ExcelMapper"
+    APPLICATIONNAME="Excel产品数据自动提取与写入工具"
+    BORDER="thin"
+    CAPTION="yes"
+    SHOWINTASKBAR="yes"
+    SINGLEINSTANCE="yes"
+    SYSMENU="yes"
+    WINDOWSTATE="normal"
+    SCROLL="yes"
+  />
+  <style>
+    body { margin: 0; font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif; background: #f4f6f8; color: #111827; }
+    .top { background: #0b2340; color: #fff; padding: 18px 24px; }
+    .top h1 { margin: 0 0 6px; font-size: 22px; }
+    .top p { margin: 0; color: #c8d6e8; font-size: 13px; }
+    .wrap { padding: 18px 24px 40px; }
+    .section { background: #fff; border: 1px solid #d8dde6; margin-bottom: 16px; padding: 16px; }
+    .section h2 { margin: 0 0 12px; font-size: 17px; color: #003b88; }
+    label { display: block; font-weight: bold; margin: 10px 0 6px; }
+    input[type=text], textarea, select { box-sizing: border-box; width: 100%; border: 1px solid #b8c0cc; padding: 7px; font-family: inherit; font-size: 13px; }
+    textarea { height: 74px; resize: vertical; }
+    button { border: 0; background: #005bbb; color: white; padding: 8px 14px; margin: 6px 6px 6px 0; cursor: pointer; font-family: inherit; }
+    button.secondary { background: #4b5563; }
+    button.safe { background: #0e7c66; }
+    button.warn { background: #b7791f; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; background: #fff; }
+    th { background: #eaf2ff; color: #003b88; text-align: left; }
+    th, td { border: 1px solid #ccd3dd; padding: 5px; vertical-align: top; }
+    td input, td select { border: 0; padding: 3px; width: 100%; background: transparent; }
+    .grid-actions { margin: 8px 0 4px; }
+    .hint { color: #6b7280; font-size: 12px; margin-top: 6px; line-height: 1.5; }
+    .row { display: table; width: 100%; table-layout: fixed; }
+    .col { display: table-cell; vertical-align: top; padding-right: 12px; }
+    .col:last-child { padding-right: 0; }
+    #logBox { height: 230px; overflow: auto; background: #0f172a; color: #d8e3f0; padding: 10px; white-space: pre-wrap; font-family: Consolas, monospace; font-size: 12px; }
+    .status { padding: 9px 12px; background: #fff8db; border: 1px solid #ead084; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <div class="top">
+    <h1>Excel产品数据自动提取与写入工具</h1>
+    <p>HTML界面版：不需要 Python；通过本机 Microsoft Excel 读取源表、写入目标表，并自动备份目标文件。</p>
+  </div>
+
+  <div class="wrap">
+    <div class="section">
+      <h2>1. 文件选择</h2>
+      <div class="row">
+        <div class="col">
+          <label>源Excel文件路径（多个文件一行一个）</label>
+          <textarea id="sourceFiles" placeholder="例如：C:\Users\你的名字\Desktop\源文件1.xlsx"></textarea>
+          <button onclick="pickSourceFolder()">选择源文件夹并自动读取 .xlsx</button>
+          <button class="secondary" onclick="clearSources()">清空源文件</button>
+          <div class="hint">如果源文件分散在不同文件夹，可直接复制完整路径到这里，每行一个。</div>
+        </div>
+        <div class="col">
+          <label>目标Excel文件路径（会覆盖，执行前自动备份）</label>
+          <input id="targetFile" type="text" placeholder="例如：C:\Users\你的名字\Desktop\目标表.xlsx" />
+          <button onclick="pickTargetFile()">选择目标文件</button>
+          <div class="hint">执行前请关闭 Excel 中打开的目标文件，否则 Windows 可能锁定文件。</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>2. 产品规则</h2>
+      <div class="hint">同一产品的客户、零件号、项目号可以填一个或多个值；多个值用逗号、分号或换行分隔。任一字段命中即可识别。</div>
+      <div class="grid-actions">
+        <button onclick="addProductRow()">新增产品</button>
+      </div>
+      <table id="productTable">
+        <thead>
+          <tr>
+            <th style="width:16%">product_name 产品名称</th>
+            <th>customer_value 客户关键值</th>
+            <th>part_no_value 零件号关键值</th>
+            <th>project_no_value 项目号关键值</th>
+            <th style="width:50px">操作</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="section">
+      <h2>3. 映射规则</h2>
+      <div class="hint">列可填写表头名称、Excel列字母（如 A）或列号（如 1）。operation 选择 copy_value 或 sum_column。</div>
+      <div class="grid-actions">
+        <button onclick="addMappingRow()">新增映射</button>
+      </div>
+      <table id="mappingTable">
+        <thead>
+          <tr>
+            <th>rule_name</th>
+            <th>product_name</th>
+            <th>source_sheet</th>
+            <th>customer_column</th>
+            <th>part_no_column</th>
+            <th>project_no_column</th>
+            <th>operation</th>
+            <th>source_value_column</th>
+            <th>target_sheet</th>
+            <th>target_cell</th>
+            <th>header_row</th>
+            <th style="width:50px">操作</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="section">
+      <h2>4. 执行与日志</h2>
+      <button class="secondary" onclick="loadConfig()">加载规则</button>
+      <button class="safe" onclick="saveConfig()">保存规则</button>
+      <button class="warn" onclick="preview()">预览匹配</button>
+      <button onclick="runWrite()">执行写入</button>
+      <button class="secondary" onclick="exportLog()">导出日志CSV</button>
+      <div class="status" id="status">等待操作。</div>
+      <div id="logBox"></div>
+    </div>
+  </div>
+
+<script type="text/javascript">
+var fso = new ActiveXObject("Scripting.FileSystemObject");
+var shell = new ActiveXObject("Shell.Application");
+var appShell = new ActiveXObject("WScript.Shell");
+var scriptDir = fso.GetParentFolderName(unescape(location.pathname).replace(/^\//, ""));
+var configPath = fso.BuildPath(scriptDir, "rules_config_html.json");
+var lastLogs = [];
+var lastEvaluation = null;
+
+function setStatus(text) { document.getElementById("status").innerText = text; }
+function log(level, rule, product, message, source, target, value) {
+  var item = { level: level || "", rule_name: rule || "", product_name: product || "", source_file: source || "", target: target || "", value: value == null ? "" : value, message: message || "" };
+  lastLogs.push(item);
+  renderLogs();
+}
+function renderLogs() {
+  var lines = [];
+  for (var i = 0; i < lastLogs.length; i++) {
+    var x = lastLogs[i];
+    lines.push("[" + x.level + "] " + x.rule_name + " / " + x.product_name + " / " + x.message + (x.value !== "" ? " / value=" + x.value : "") + (x.source_file ? " / source=" + x.source_file : "") + (x.target ? " / target=" + x.target : ""));
+  }
+  document.getElementById("logBox").innerText = lines.join("\n");
+}
+function clearLog() { lastLogs = []; renderLogs(); }
+
+function esc(value) {
+  return String(value == null ? "" : value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+}
+function normalizeKey(value) {
+  if (value == null) return "";
+  return String(value).replace(/^\s+|\s+$/g, "").replace(/\s+/g, " ").toUpperCase();
+}
+function splitKeys(value) {
+  var out = {};
+  var parts = String(value || "").split(/[,，;；\r\n]+/);
+  for (var i = 0; i < parts.length; i++) {
+    var k = normalizeKey(parts[i]);
+    if (k) out[k] = true;
+  }
+  return out;
+}
+function isBlank(value) {
+  return value == null || String(value).replace(/^\s+|\s+$/g, "") === "";
+}
+function toNumber(value) {
+  if (value == null || value === "") return null;
+  var n = Number(String(value).replace(/,/g, ""));
+  return isNaN(n) ? null : n;
+}
+
+function addProductRow(row) {
+  row = row || {};
+  var tr = document.createElement("tr");
+  tr.innerHTML =
+    '<td><input name="product_name" value="' + esc(row.product_name || "") + '"></td>' +
+    '<td><input name="customer_value" value="' + esc(row.customer_value || "") + '"></td>' +
+    '<td><input name="part_no_value" value="' + esc(row.part_no_value || "") + '"></td>' +
+    '<td><input name="project_no_value" value="' + esc(row.project_no_value || "") + '"></td>' +
+    '<td><button onclick="removeRow(this)">删除</button></td>';
+  document.getElementById("productTable").getElementsByTagName("tbody")[0].appendChild(tr);
+}
+function addMappingRow(row) {
+  row = row || {};
+  var op = row.operation || "copy_value";
+  var tr = document.createElement("tr");
+  tr.innerHTML =
+    '<td><input name="rule_name" value="' + esc(row.rule_name || "") + '"></td>' +
+    '<td><input name="product_name" value="' + esc(row.product_name || "") + '"></td>' +
+    '<td><input name="source_sheet" value="' + esc(row.source_sheet || "Sheet1") + '"></td>' +
+    '<td><input name="customer_column" value="' + esc(row.customer_column || "") + '"></td>' +
+    '<td><input name="part_no_column" value="' + esc(row.part_no_column || "") + '"></td>' +
+    '<td><input name="project_no_column" value="' + esc(row.project_no_column || "") + '"></td>' +
+    '<td><select name="operation"><option value="copy_value">copy_value</option><option value="sum_column">sum_column</option></select></td>' +
+    '<td><input name="source_value_column" value="' + esc(row.source_value_column || "") + '"></td>' +
+    '<td><input name="target_sheet" value="' + esc(row.target_sheet || "Sheet1") + '"></td>' +
+    '<td><input name="target_cell" value="' + esc(row.target_cell || "B2") + '"></td>' +
+    '<td><input name="header_row" value="' + esc(row.header_row || "1") + '"></td>' +
+    '<td><button onclick="removeRow(this)">删除</button></td>';
+  document.getElementById("mappingTable").getElementsByTagName("tbody")[0].appendChild(tr);
+  tr.getElementsByTagName("select")[0].value = op;
+}
+function removeRow(btn) {
+  var tr = btn;
+  while (tr && tr.tagName !== "TR") tr = tr.parentNode;
+  if (tr) tr.parentNode.removeChild(tr);
+}
+function readTable(tableId) {
+  var rows = [];
+  var trs = document.getElementById(tableId).getElementsByTagName("tbody")[0].getElementsByTagName("tr");
+  for (var i = 0; i < trs.length; i++) {
+    var obj = {};
+    var fields = trs[i].getElementsByTagName("input");
+    var has = false;
+    for (var j = 0; j < fields.length; j++) {
+      obj[fields[j].name] = fields[j].value;
+      if (fields[j].value.replace(/^\s+|\s+$/g, "")) has = true;
+    }
+    var selects = trs[i].getElementsByTagName("select");
+    for (var k = 0; k < selects.length; k++) obj[selects[k].name] = selects[k].value;
+    if (has) rows.push(obj);
+  }
+  return rows;
+}
+
+function defaultConfig() {
+  return {
+    products: [{ product_name: "产品A", customer_value: "客户名称", part_no_value: "零件号", project_no_value: "项目号" }],
+    mappings: [{ rule_name: "示例_取数", product_name: "产品A", source_sheet: "Sheet1", customer_column: "客户", part_no_column: "零件号", project_no_column: "项目号", operation: "copy_value", source_value_column: "金额", target_sheet: "Sheet1", target_cell: "B2", header_row: "1" }]
+  };
+}
+function applyConfig(config) {
+  document.getElementById("productTable").getElementsByTagName("tbody")[0].innerHTML = "";
+  document.getElementById("mappingTable").getElementsByTagName("tbody")[0].innerHTML = "";
+  for (var i = 0; i < config.products.length; i++) addProductRow(config.products[i]);
+  for (var j = 0; j < config.mappings.length; j++) addMappingRow(config.mappings[j]);
+}
+function loadConfig() {
+  try {
+    if (fso.FileExists(configPath)) {
+      var file = fso.OpenTextFile(configPath, 1, false, -1);
+      var text = file.ReadAll();
+      file.Close();
+      applyConfig(JSON.parse(text));
+      setStatus("已加载规则：" + configPath);
+    } else {
+      applyConfig(defaultConfig());
+      setStatus("未找到规则文件，已加载默认示例。");
+    }
+  } catch (e) {
+    alert("加载规则失败：" + e.message);
+  }
+}
+function saveConfig() {
+  try {
+    var config = { products: readTable("productTable"), mappings: readTable("mappingTable") };
+    var file = fso.OpenTextFile(configPath, 2, true, -1);
+    file.Write(JSON.stringify(config, null, 2));
+    file.Close();
+    setStatus("规则已保存：" + configPath);
+  } catch (e) {
+    alert("保存规则失败：" + e.message);
+  }
+}
+
+function pickSourceFolder() {
+  var folder = shell.BrowseForFolder(0, "请选择源Excel所在文件夹", 0);
+  if (!folder) return;
+  var path = folder.Self.Path;
+  var files = [];
+  var enumFiles = new Enumerator(fso.GetFolder(path).Files);
+  for (; !enumFiles.atEnd(); enumFiles.moveNext()) {
+    var file = enumFiles.item();
+    var name = String(file.Name).toLowerCase();
+    if (name.match(/\.xlsx$/) && name.indexOf("~$") !== 0) files.push(file.Path);
+  }
+  document.getElementById("sourceFiles").value = files.join("\r\n");
+  setStatus("已读取源文件夹，共 " + files.length + " 个 .xlsx 文件。");
+}
+function clearSources() { document.getElementById("sourceFiles").value = ""; }
+function pickTargetFile() {
+  var path = appShell.Exec('mshta.exe "about:<input type=file id=f><script>f.click();new ActiveXObject(\'Scripting.FileSystemObject\').GetStandardStream(1).Write(f.value);close();</script>"').StdOut.ReadAll();
+  if (path) document.getElementById("targetFile").value = path;
+}
+function sourceFiles() {
+  var lines = document.getElementById("sourceFiles").value.split(/\r?\n/);
+  var out = [];
+  for (var i = 0; i < lines.length; i++) {
+    var p = lines[i].replace(/^\s+|\s+$/g, "");
+    if (p) out.push(p);
+  }
+  return out;
+}
+function validateInputs() {
+  var src = sourceFiles();
+  if (!src.length) { alert("请选择或填写至少一个源Excel文件。"); return false; }
+  for (var i = 0; i < src.length; i++) {
+    if (!fso.FileExists(src[i])) { alert("源文件不存在：" + src[i]); return false; }
+  }
+  var target = document.getElementById("targetFile").value.replace(/^\s+|\s+$/g, "");
+  if (!target || !fso.FileExists(target)) { alert("请选择有效的目标Excel文件。"); return false; }
+  if (!readTable("productTable").length) { alert("请至少配置一个产品规则。"); return false; }
+  if (!readTable("mappingTable").length) { alert("请至少配置一条映射规则。"); return false; }
+  return true;
+}
+
+function worksheetByName(wb, name) {
+  for (var i = 1; i <= wb.Worksheets.Count; i++) {
+    var ws = wb.Worksheets(i);
+    if (ws.Name === name) return ws;
+  }
+  return null;
+}
+function columnNumber(ws, ref, headerRow) {
+  ref = String(ref || "").replace(/^\s+|\s+$/g, "");
+  if (!ref) throw new Error("列配置为空");
+  if (/^\d+$/.test(ref)) return Number(ref);
+  if (/^[A-Za-z]{1,3}$/.test(ref)) {
+    var sum = 0, s = ref.toUpperCase();
+    for (var i = 0; i < s.length; i++) sum = sum * 26 + (s.charCodeAt(i) - 64);
+    return sum;
+  }
+  var wanted = normalizeKey(ref);
+  var lastCol = ws.UsedRange.Columns.Count;
+  for (var c = 1; c <= lastCol; c++) {
+    if (normalizeKey(ws.Cells(headerRow, c).Value2) === wanted) return c;
+  }
+  throw new Error("找不到表头列：" + ref);
+}
+function productMatches(ws, row, product, mapping, headerRow, sourcePath) {
+  var checks = [
+    { col: mapping.customer_column, keys: splitKeys(product.customer_value), label: "客户列" },
+    { col: mapping.part_no_column, keys: splitKeys(product.part_no_value), label: "零件号列" },
+    { col: mapping.project_no_column, keys: splitKeys(product.project_no_value), label: "项目号列" }
+  ];
+  for (var i = 0; i < checks.length; i++) {
+    var ck = checks[i];
+    var hasKeys = false;
+    for (var k in ck.keys) { hasKeys = true; break; }
+    if (!ck.col || !hasKeys) continue;
+    try {
+      var col = columnNumber(ws, ck.col, headerRow);
+      var cellKey = normalizeKey(ws.Cells(row, col).Value2);
+      if (ck.keys[cellKey]) return true;
+    } catch (e) {
+      log("WARN", mapping.rule_name, mapping.product_name, ck.label + "不可用：" + e.message, sourcePath, "", "");
+    }
+  }
+  return false;
+}
+function evaluate() {
+  clearLog();
+  var products = readTable("productTable");
+  var mappings = readTable("mappingTable");
+  var productByName = {};
+  for (var p = 0; p < products.length; p++) productByName[products[p].product_name] = products[p];
+  var files = sourceFiles();
+  var excel = new ActiveXObject("Excel.Application");
+  excel.Visible = false;
+  excel.DisplayAlerts = false;
+  var results = [];
+  try {
+    for (var m = 0; m < mappings.length; m++) {
+      var mapping = mappings[m];
+      var product = productByName[mapping.product_name];
+      var matched = 0, copyValue = null, sum = 0, sumSeen = false;
+      if (!product) {
+        log("ERROR", mapping.rule_name, mapping.product_name, "找不到对应的产品规则", "", "", "");
+        continue;
+      }
+      var headerRow = Number(mapping.header_row || 1);
+      if (!headerRow || headerRow < 1) headerRow = 1;
+      for (var f = 0; f < files.length; f++) {
+        var wb = null;
+        try {
+          wb = excel.Workbooks.Open(files[f], false, true);
+          var ws = worksheetByName(wb, mapping.source_sheet);
+          if (!ws) {
+            log("ERROR", mapping.rule_name, mapping.product_name, "源sheet不存在：" + mapping.source_sheet, files[f], "", "");
+            continue;
+          }
+          var valueCol = columnNumber(ws, mapping.source_value_column, headerRow);
+          var lastRow = ws.UsedRange.Rows.Count;
+          for (var r = headerRow + 1; r <= lastRow; r++) {
+            if (!productMatches(ws, r, product, mapping, headerRow, files[f])) continue;
+            matched++;
+            var raw = ws.Cells(r, valueCol).Value2;
+            if (mapping.operation === "copy_value") {
+              if (copyValue === null && !isBlank(raw)) {
+                copyValue = raw;
+                log("INFO", mapping.rule_name, mapping.product_name, "命中并取第一个非空值，源行 " + r, files[f], "", raw);
+              }
+            } else if (mapping.operation === "sum_column") {
+              var num = toNumber(raw);
+              if (num === null) {
+                if (!isBlank(raw)) log("WARN", mapping.rule_name, mapping.product_name, "求和时忽略非数字值，源行 " + r, files[f], "", raw);
+              } else {
+                sum += num;
+                sumSeen = true;
+              }
+            } else {
+              log("ERROR", mapping.rule_name, mapping.product_name, "不支持的操作：" + mapping.operation, files[f], "", "");
+            }
+          }
+        } catch (e) {
+          log("ERROR", mapping.rule_name, mapping.product_name, "源文件处理失败：" + e.message, files[f], "", "");
+        } finally {
+          if (wb) wb.Close(false);
+        }
+      }
+      var shouldWrite = false, value = null;
+      if (matched === 0) {
+        log("WARN", mapping.rule_name, mapping.product_name, "未匹配到产品数据", "", "", "");
+      } else if (mapping.operation === "copy_value" && copyValue !== null) {
+        value = copyValue;
+        shouldWrite = true;
+      } else if (mapping.operation === "sum_column" && sumSeen) {
+        value = sum;
+        shouldWrite = true;
+      } else {
+        log("WARN", mapping.rule_name, mapping.product_name, "匹配到产品，但没有可写入的值", "", "", "");
+      }
+      results.push({ mapping: mapping, value: value, matched_count: matched, should_write: shouldWrite });
+      log("INFO", mapping.rule_name, mapping.product_name, "预览完成：匹配行数=" + matched + "，将写入=" + shouldWrite, "", mapping.target_sheet + "!" + mapping.target_cell, value);
+    }
+  } finally {
+    excel.Quit();
+  }
+  return { results: results, logs: lastLogs };
+}
+function preview() {
+  if (!validateInputs()) return;
+  try {
+    lastEvaluation = evaluate();
+    setStatus("预览完成。请查看下方日志，确认后再执行写入。");
+  } catch (e) {
+    alert("预览失败：" + e.message);
+  }
+}
+function runWrite() {
+  if (!validateInputs()) return;
+  try {
+    lastEvaluation = evaluate();
+    var target = document.getElementById("targetFile").value.replace(/^\s+|\s+$/g, "");
+    var folder = fso.GetParentFolderName(target);
+    var base = fso.GetBaseName(target);
+    var ext = fso.GetExtensionName(target);
+    var now = new Date();
+    var stamp = now.getFullYear() + pad(now.getMonth()+1) + pad(now.getDate()) + "_" + pad(now.getHours()) + pad(now.getMinutes()) + pad(now.getSeconds());
+    var backup = fso.BuildPath(folder, base + ".backup_" + stamp + "." + ext);
+    fso.CopyFile(target, backup, true);
+    var excel = new ActiveXObject("Excel.Application");
+    excel.Visible = false;
+    excel.DisplayAlerts = false;
+    var wb = null;
+    try {
+      wb = excel.Workbooks.Open(target);
+      for (var i = 0; i < lastEvaluation.results.length; i++) {
+        var result = lastEvaluation.results[i];
+        if (!result.should_write) continue;
+        var mapping = result.mapping;
+        var ws = worksheetByName(wb, mapping.target_sheet);
+        if (!ws) {
+          log("ERROR", mapping.rule_name, mapping.product_name, "目标sheet不存在：" + mapping.target_sheet, "", mapping.target_sheet + "!" + mapping.target_cell, result.value);
+          continue;
+        }
+        try {
+          ws.Range(mapping.target_cell).Value2 = result.value;
+          log("INFO", mapping.rule_name, mapping.product_name, "已写入目标单元格", "", mapping.target_sheet + "!" + mapping.target_cell, result.value);
+        } catch (e) {
+          log("ERROR", mapping.rule_name, mapping.product_name, "目标单元格写入失败：" + e.message, "", mapping.target_sheet + "!" + mapping.target_cell, result.value);
+        }
+      }
+      wb.Save();
+    } finally {
+      if (wb) wb.Close(true);
+      excel.Quit();
+    }
+    setStatus("写入完成。备份文件：" + backup);
+    alert("写入完成。\n备份文件：" + backup);
+  } catch (e) {
+    alert("写入失败：" + e.message + "\n请确认目标文件没有在 Excel 中打开。");
+  }
+}
+function pad(n) { return n < 10 ? "0" + n : String(n); }
+function exportLog() {
+  if (!lastLogs.length) { alert("没有日志可导出。"); return; }
+  var path = fso.BuildPath(scriptDir, "processing_log.csv");
+  var file = fso.OpenTextFile(path, 2, true, -1);
+  file.WriteLine("level,rule_name,product_name,source_file,target,value,message");
+  for (var i = 0; i < lastLogs.length; i++) {
+    var x = lastLogs[i];
+    file.WriteLine(csv(x.level) + "," + csv(x.rule_name) + "," + csv(x.product_name) + "," + csv(x.source_file) + "," + csv(x.target) + "," + csv(x.value) + "," + csv(x.message));
+  }
+  file.Close();
+  setStatus("日志已导出：" + path);
+  alert("日志已导出：" + path);
+}
+function csv(value) {
+  return '"' + String(value == null ? "" : value).replace(/"/g, '""') + '"';
+}
+
+window.onload = function() {
+  loadConfig();
+};
+</script>
+</body>
+</html>
