@@ -1,63 +1,46 @@
-# Excel产品数据自动提取与写入工具
+# CU导入工具
 
-这是一个本机网页工具，用于从多个源 `.xlsx` 产品文件中按客户、零件号或项目号识别车型/产品，并把提取值或求和值写入目标 `.xlsx` 表格。既支持写入固定单元格，也支持按目标表里的车型列自动找到对应行后写入指定列，适合多个车型重复处理。
+CU导入工具是一个本机可运行的 Excel 写入工具，用于把源预测文件中的产品数据，按规则写入目标容量模板。它支持：
 
-## Windows电脑使用方式
+- 浏览器 HTML 版，无需安装 Python
+- Windows HTA / PowerShell 免安装版
+- Python 网页版，适合本机调试和扩展
 
-### 方式一：纯HTML版（不需要Python，推荐）
+它当前针对的真实流程是：
 
-1. 把本文件夹复制到 Windows 电脑。
-2. 双击 `excel_mapper_browser.html`。
-3. 先上传“要改的目标Excel”，再上传“参考Excel”。
-4. 配置产品规则和映射规则。
-5. 点击“预览匹配”，确认无误后点击“执行吸入并下载Excel”。
+1. 打开 `5+7.xlsx` 这类源预测文件
+2. 在 `Sales-CB` / `Sales-CV` 里按产品和值筛选
+3. 对指定列求和，例如 `BZ`
+4. 把结果写入 `Welding-CTOH` / `Welding-LV` 模板中的指定产品行和列
 
-这个版本是真正的 `.html` 文件，不需要 Python，也不需要安装第三方库。浏览器安全限制下，它不会覆盖原文件，而是下载一个新的 `xxx_已更新.xlsx`。
+## 预览
 
-#### 多车型批量模式
+![CU导入工具界面](docs/assets/cu-tool-ui.png)
 
-在“映射规则”里：
+## 适用场景
 
-- `产品` 填具体车型名称：只处理这一辆车型。
-- `产品` 填 `*` 或 `ALL`：同一条规则自动套用到“产品规则”里的全部车型。
-- `目标模式` 选“固定单元格”：写入 `目标单元格`，例如 `B2`。
-- `目标模式` 选“按车型找行”：程序会先在 `目标匹配列` 里找车型/客户/零件号/项目号，再把结果写到 `目标写入列` 的同一行。
-- `目标匹配列` 和 `目标写入列` 可以填写表头名称、Excel列字母或列号，例如 `车型`、`B`、`2`。
-- `表头行` 用于源文件找列；`目标表头行` 用于目标文件找列。
+- 车型很多，但规则一致
+- 需要人工从源 Excel 汇总后写到模板
+- 不方便在 Windows 机器上安装 Python
+- 需要先预览，再写入，减少误改
 
-规则会保存到当前浏览器的本地存储里。换电脑或换浏览器后，需要重新配置一次。
+## 快速开始
 
-### 方式二：HTA免安装版（可直接覆盖目标文件）
+### 方案一：直接打开 HTML
 
-前提：Windows电脑已安装 Microsoft Excel。
+1. 打开 `excel_mapper_browser.html`
+2. 先上传源文件，再上传目标模板
+3. 填写规则行
+4. 点击 `预览结果`
+5. 确认无误后点击 `生成更新文件`
 
-1. 把本文件夹复制到 Windows 电脑。
-2. 双击 `run_windows_html.bat`。
-3. 在 HTML 界面窗口里选择源Excel、目标Excel，配置产品规则和映射规则。
-4. 点击“预览匹配”，确认无误后点击“执行写入”。
+### 方案二：Windows 免安装
 
-这个版本使用 Windows HTML 应用调用本机 Excel，不需要安装 Python。执行写入前会自动备份目标文件。
+1. 双击 `run_windows_html.bat`
+2. 或双击 `excel_mapper_html.hta`
+3. 按页面提示选择源文件和目标文件
 
-如果 `run_windows_html.bat` 没反应，也可以直接双击 `excel_mapper_html.hta`。
-
-### 方式二-B：PowerShell免安装版（备用）
-
-如果 HTML 应用被公司策略拦截，可以尝试双击 `run_windows_no_python.bat`。
-它同样不需要 Python，但需要允许运行 PowerShell。
-
-### 方式三：网页版本（需要Python）
-
-1. 安装 Python 3.10 或更新版本。
-2. 安装时勾选 `Add Python to PATH`。
-3. 把本文件夹复制到 Windows 电脑。
-4. 双击 `run_windows.bat`。
-5. 浏览器打开 `http://127.0.0.1:8501`。
-
-首次启动会自动创建 `.venv` 本地运行环境并安装依赖，可能需要几分钟。
-
-### 方式四：命令行启动网页版本
-
-在本文件夹打开命令提示符或 PowerShell：
+### 方案三：Python 网页版
 
 ```bash
 python -m venv .venv
@@ -65,40 +48,46 @@ python -m venv .venv
 .venv\Scripts\streamlit.exe run app.py --server.address 127.0.0.1 --server.port 8501
 ```
 
-## macOS/Linux 启动
+## 规则说明
 
-```bash
-python3 -m pip install -r requirements.txt
-streamlit run app.py
-```
+每一行规则对应一次写入，核心字段如下：
 
-浏览器打开后：
+- `源Sheet`：例如 `Sales-CV`
+- `源产品列 / 值`：例如 `A / CAT`
+- `源部件列 / 值`：例如 `D / C7.1 TA`
+- `求和列`：例如 `BZ`
+- `目标Sheet`：例如 `Welding-CTOH`
+- `目标客户列 / 值`：例如 `D / CATWuxi`
+- `目标部件列 / 值`：例如 `B / C7.1TA`
+- `写入列`：例如 `N`
 
-1. 上传多个源 Excel 文件。
-2. 输入目标 Excel 路径，或上传目标 Excel 文件。
-   - Windows路径示例：`C:\Users\你的名字\Desktop\目标表.xlsx`
-   - 如果目标文件在 OneDrive 或共享盘，也可以填写对应的本机同步路径。
-3. 在“产品规则”里配置产品名称、客户、零件号、项目号。
-4. 在“映射规则”里配置源 sheet、识别列、取数列、目标 sheet 和目标单元格。
-5. 先预览，再执行写入。
+匹配规则：
 
-## 覆盖保存说明
+- 忽略大小写
+- 忽略空格、换行和多余空白
+- 客户值和部件值都要命中
+- 求和列里的非数字会忽略并写日志
 
-如果填写了“目标文件本机路径”，程序会覆盖该文件，并先生成备份：
+## 常见约定
 
-`原文件名.backup_YYYYMMDD_HHMMSS.xlsx`
+- 只支持 `.xlsx`
+- 先 `预览结果`，再 `生成更新文件`
+- 浏览器版不会直接覆盖原文件，只会下载新文件
+- 目标表找不到行时，先修正规则再执行
 
-如果只上传目标文件，程序无法知道浏览器中文件的原始路径，会提供处理后的文件下载。
+## 文件结构
 
-## Windows注意事项
+- `excel_mapper_browser.html`：单文件 HTML 版
+- `excel_mapper_html.hta`：Windows HTA 版
+- `excel_mapper_windows.ps1`：PowerShell 版
+- `app.py` / `excel_tool.py`：Python 网页版
+- `tests/`：基础单元测试
 
-- 覆盖目标文件前，请先关闭 Excel 中打开的目标文件，否则 Windows 可能会锁定文件导致写入失败。
-- 纯HTML版不会覆盖原文件，只会下载修改后的新文件，因此不需要关闭原文件。
-- 免安装版需要电脑上装有 Microsoft Excel，因为它通过 Excel 自身读写工作簿。
-- 如果公司策略禁止 HTA/ActiveX，`run_windows_html.bat` 可能无法启动，需要 IT 放行 HTA，或改用 PowerShell 免安装版。
-- 如果公司策略禁止 PowerShell 脚本，`run_windows_no_python.bat` 可能无法启动。
-- 推荐使用 `.xlsx`，不支持 `.xls` 和 `.xlsm`。
-- 源文件可以多选上传；目标文件如果要直接覆盖，必须填写本机路径。
-- 网页版本规则会保存到程序目录下的 `rules_config.json`。
-- HTML免安装版规则会保存到 `rules_config_html.json`。
-- PowerShell免安装版规则会保存到 `rules_config_windows.json`。
+## 开源许可
+
+本项目使用 MIT License，见 [LICENSE](LICENSE)。
+
+## 作者
+
+Huo Yu'an  
+yuan.huo@tenneco.com
