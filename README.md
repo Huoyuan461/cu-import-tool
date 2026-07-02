@@ -1,5 +1,7 @@
 # CU导入工具
 
+![Tenneco Logo](docs/assets/tenneco-logo.png)
+
 CU导入工具是一个本机可运行的 Excel 写入工具，用于把源预测文件中的产品数据，按规则写入目标容量模板。它支持：
 
 - 浏览器 HTML 版，无需安装 Python
@@ -89,5 +91,5 @@ python -m venv .venv
 
 ## 作者
 
-Huo Yu'an  
-yuan.huo@tenneco.com
+制作人：Huo Yu’an  
+Email：yuan.huo@tenneco.com

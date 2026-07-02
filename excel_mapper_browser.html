@@ -41,12 +41,42 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
     }
     header {
-      padding: 22px 28px;
-      background: linear-gradient(120deg, var(--blue-2), #164b90);
-      color: #fff;
+      padding: 18px 28px 20px;
+      background: linear-gradient(180deg, #f8fbff 0%, #ecf3fb 100%);
+      color: var(--text);
+      border-bottom: 1px solid #d8e3f3;
     }
-    h1 { margin: 0 0 8px; font-size: 24px; }
-    header p { margin: 0; color: #dbe7f8; line-height: 1.6; }
+    .brandbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      flex-wrap: wrap;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-width: 0;
+    }
+    .brand img {
+      width: 168px;
+      max-width: 34vw;
+      height: auto;
+      display: block;
+      flex: 0 0 auto;
+      filter: none;
+    }
+    .headline h1 { margin: 0 0 6px; font-size: 24px; color: #0e3d7a; }
+    .headline p { margin: 0; color: #52637a; line-height: 1.6; }
+    .author-card {
+      text-align: right;
+      color: #52637a;
+      font-size: 13px;
+      line-height: 1.5;
+      white-space: nowrap;
+    }
+    .author-card strong { display: block; font-size: 14px; color: #0e3d7a; }
     main { max-width: 1500px; margin: 0 auto; padding: 18px 22px 38px; }
     section {
       background: var(--panel);
@@ -84,7 +114,19 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     button.secondary { background: #475467; }
     button.safe { background: var(--green); }
     button.warn { background: var(--amber); }
-    button.danger { background: var(--red); }
+    button.danger {
+      background: var(--red);
+      white-space: nowrap;
+      width: 64px;
+      min-width: 64px;
+      height: 34px;
+      padding: 0 10px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+      border-radius: 6px;
+    }
     .toolbar { margin: 8px 0 0; }
     .status {
       margin-top: 12px;
@@ -120,7 +162,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     th, td {
       border: 1px solid var(--line);
       padding: 6px;
-      vertical-align: top;
+      vertical-align: middle;
     }
     th {
       background: var(--soft);
@@ -128,7 +170,16 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       text-align: left;
       font-weight: 700;
     }
-    td input { width: 100%; min-width: 72px; }
+    td input, td select {
+      width: calc(100% - 8px);
+      min-width: 72px;
+      display: block;
+      margin: 0 auto;
+    }
+    #ruleTable td:last-child {
+      vertical-align: middle;
+      text-align: center;
+    }
     .logs {
       height: 280px;
       overflow: auto;
@@ -144,18 +195,46 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       margin-left: 8px;
       padding: 2px 8px;
       border-radius: 999px;
-      background: rgba(255,255,255,.12);
+      background: rgba(14,61,122,.1);
+      color: #0e3d7a;
       font-size: 12px;
       vertical-align: middle;
     }
     .small { color: var(--muted); font-size: 12px; }
     .table-wrap { overflow: auto; }
+    footer {
+      max-width: 1500px;
+      margin: 0 auto;
+      padding: 0 22px 28px;
+      color: #5f6f84;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+    footer .footer-card {
+      border-top: 1px solid var(--line);
+      padding: 12px 2px 0;
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
   </style>
 </head>
 <body>
   <header>
-    <h1>CU导入工具 <span class="pill">HTML 单文件</span></h1>
-    <p>上传源 `.xlsx` 和目标 `.xlsx`，按你给定的行列规则自动完成：源表筛选并对指定列求和，写入模板中对应产品行的指定列。</p>
+    <div class="brandbar">
+      <div class="brand">
+        <img src="docs/assets/tenneco-logo.png" alt="Tenneco logo" />
+        <div class="headline">
+          <h1>CU导入工具 <span class="pill">HTML 单文件</span></h1>
+          <p>上传源 `.xlsx` 和目标 `.xlsx`，按你给定的行列规则自动完成：源表筛选并对指定列求和，写入模板中对应产品行的指定列。</p>
+        </div>
+      </div>
+      <div class="author-card">
+        <strong>制作人：Huo Yu’an</strong>
+        Email：yuan.huo@tenneco.com
+      </div>
+    </div>
   </header>
 
   <main>
@@ -168,7 +247,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
           <div class="hint">支持多选。程序会逐个读取源文件并累加匹配结果。建议直接上传你要用的预测文件或同一批次文件。</div>
         </div>
         <div>
-          <label>目标文件 / 模板文件</label>
+          <label>目标文件 / 10_Capacity Utilization V9M_temple</label>
           <input id="targetFile" type="file" accept=".xlsx" />
           <div class="hint">浏览器无法直接覆盖原文件，最终会下载一个新的已更新文件。原模板不会被破坏。</div>
         </div>
@@ -184,9 +263,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       </div>
       <div class="toolbar">
         <button onclick="addRuleRow()">新增空白规则</button>
-        <button class="secondary" onclick="addExampleRule()">加入 CAT 示例</button>
+        <button class="secondary" onclick="copyLastRule()">复制上一条规则</button>
         <button class="secondary" onclick="saveRules()">保存规则</button>
-        <button class="secondary" onclick="loadRules()">加载规则</button>
       </div>
       <div class="table-wrap">
         <table id="ruleTable">
@@ -205,7 +283,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
               <th style="width:90px;">目标部件列</th>
               <th style="width:120px;">目标部件值</th>
               <th style="width:90px;">写入列</th>
-              <th style="width:68px;">删除</th>
+              <th style="width:76px;">删除</th>
             </tr>
           </thead>
           <tbody></tbody>
@@ -225,6 +303,12 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       <div class="hint">写入时只修改规则指定的目标单元格，不会重建整本工作簿。若目标单元格原来有公式，会被结果值替换。</div>
     </section>
   </main>
+  <footer>
+    <div class="footer-card">
+      <div>制作人：Huo Yu’an</div>
+      <div>Email：yuan.huo@tenneco.com</div>
+    </div>
+  </footer>
 
 <script>
 const STORAGE_KEY = "cu_import_tool_rules_v1";
@@ -494,23 +578,7 @@ class XlsxSheet {
 }
 
 function defaultRules() {
-  return [
-    {
-      rule_name: "CAT 示例",
-      source_sheet: "Sales-CV",
-      source_product_column: "A",
-      source_product_value: "CAT",
-      source_part_column: "D",
-      source_part_value: "C7.1 TA",
-      source_sum_column: "BZ",
-      target_sheet: "Welding-CTOH",
-      target_lookup_column: "D",
-      target_lookup_value: "CATWuxi",
-      target_part_column: "B",
-      target_part_value: "C7.1TA",
-      target_write_column: "N",
-    },
-  ];
+  return [];
 }
 function ruleRow(rule = {}) {
   const tr = document.createElement("tr");
@@ -534,8 +602,17 @@ function ruleRow(rule = {}) {
 function addRuleRow(rule = {}) {
   document.querySelector("#ruleTable tbody").appendChild(ruleRow(rule));
 }
-function addExampleRule() {
-  addRuleRow(defaultRules()[0]);
+function copyLastRule() {
+  const rows = [...document.querySelectorAll("#ruleTable tbody tr")];
+  if (!rows.length) {
+    addRuleRow();
+    return;
+  }
+  const rule = {};
+  rows[rows.length - 1].querySelectorAll("input").forEach(el => {
+    rule[el.name] = el.value;
+  });
+  addRuleRow(rule);
 }
 function removeRule(btn) {
   btn.closest("tr").remove();
@@ -554,9 +631,12 @@ function saveRules() {
 function loadRules() {
   const raw = localStorage.getItem(STORAGE_KEY);
   document.querySelector("#ruleTable tbody").innerHTML = "";
-  const rules = raw ? JSON.parse(raw) : defaultRules();
-  rules.forEach(addRuleRow);
-  setStatus(raw ? "已从浏览器加载保存的规则。" : "未找到已保存规则，已加载示例规则。");
+  if (raw) {
+    JSON.parse(raw).forEach(addRuleRow);
+    setStatus("已从浏览器加载保存的规则。");
+  } else {
+    setStatus("当前是空白规则。");
+  }
 }
 
 async function loadWorkbookStructure(file) {

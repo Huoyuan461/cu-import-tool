@@ -17,9 +17,14 @@
   />
   <style>
     body { margin: 0; font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif; background: #f4f6f8; color: #111827; }
-    .top { background: #0b2340; color: #fff; padding: 18px 24px; }
-    .top h1 { margin: 0 0 6px; font-size: 22px; }
-    .top p { margin: 0; color: #c8d6e8; font-size: 13px; }
+    .top { background: linear-gradient(180deg, #f8fbff 0%, #ecf3fb 100%); color: #111827; padding: 16px 24px 18px; border-bottom: 1px solid #d8e3f3; }
+    .topbar { display: table; width: 100%; table-layout: fixed; }
+    .brand { display: table-cell; vertical-align: middle; }
+    .brand img { width: 180px; height: auto; display: block; margin-bottom: 8px; }
+    .brand h1 { margin: 0 0 6px; font-size: 22px; }
+    .brand p { margin: 0; color: #52637a; font-size: 13px; }
+    .author { display: table-cell; vertical-align: middle; text-align: right; color: #52637a; font-size: 13px; line-height: 1.5; }
+    .author strong { display: block; color: #0e3d7a; font-size: 14px; }
     .wrap { padding: 18px 24px 40px; }
     .section { background: #fff; border: 1px solid #d8dde6; margin-bottom: 16px; padding: 16px; }
     .section h2 { margin: 0 0 12px; font-size: 17px; color: #003b88; }
@@ -30,10 +35,24 @@
     button.secondary { background: #4b5563; }
     button.safe { background: #0e7c66; }
     button.warn { background: #b7791f; }
+    button.delete-btn {
+      background: #c32617;
+      white-space: nowrap;
+      width: 64px;
+      min-width: 64px;
+      height: 34px;
+      padding: 0 10px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+      border-radius: 6px;
+    }
+    td:last-child { vertical-align: middle; text-align: center; }
     table { width: 100%; border-collapse: collapse; font-size: 12px; background: #fff; }
     th { background: #eaf2ff; color: #003b88; text-align: left; }
-    th, td { border: 1px solid #ccd3dd; padding: 5px; vertical-align: top; }
-    td input, td select { border: 0; padding: 3px; width: 100%; background: transparent; }
+    th, td { border: 1px solid #ccd3dd; padding: 5px; vertical-align: middle; }
+    td input, td select { border: 0; padding: 3px; width: calc(100% - 8px); background: transparent; display: block; margin: 0 auto; }
     .grid-actions { margin: 8px 0 4px; }
     .hint { color: #6b7280; font-size: 12px; margin-top: 6px; line-height: 1.5; }
     .row { display: table; width: 100%; table-layout: fixed; }
@@ -45,8 +64,17 @@
 </head>
 <body>
   <div class="top">
-    <h1>Excel产品数据自动提取与写入工具</h1>
-    <p>HTML界面版：不需要 Python；通过本机 Microsoft Excel 读取源表、写入目标表，并自动备份目标文件。</p>
+    <div class="topbar">
+      <div class="brand">
+        <img src="docs/assets/tenneco-logo.png" alt="Tenneco logo" />
+        <h1>Excel产品数据自动提取与写入工具</h1>
+        <p>HTML界面版：不需要 Python；通过本机 Microsoft Excel 读取源表、写入目标表，并自动备份目标文件。</p>
+      </div>
+      <div class="author">
+        <strong>制作人：Huo Yu’an</strong>
+        Email：yuan.huo@tenneco.com
+      </div>
+    </div>
   </div>
 
   <div class="wrap">
@@ -61,7 +89,7 @@
           <div class="hint">如果源文件分散在不同文件夹，可直接复制完整路径到这里，每行一个。</div>
         </div>
         <div class="col">
-          <label>目标Excel文件路径（会覆盖，执行前自动备份）</label>
+          <label>目标Excel文件路径（10_Capacity Utilization V9M_temple，会覆盖，执行前自动备份）</label>
           <input id="targetFile" type="text" placeholder="例如：C:\Users\你的名字\Desktop\目标表.xlsx" />
           <button onclick="pickTargetFile()">选择目标文件</button>
           <div class="hint">执行前请关闭 Excel 中打开的目标文件，否则 Windows 可能锁定文件。</div>
@@ -128,6 +156,10 @@
     </div>
   </div>
 
+  <div style="padding:0 24px 20px; color:#6b7280; font-size:12px;">
+    制作人：Huo Yu’an　Email：yuan.huo@tenneco.com
+  </div>
+
 <script type="text/javascript">
 var fso = new ActiveXObject("Scripting.FileSystemObject");
 var shell = new ActiveXObject("Shell.Application");
@@ -186,7 +218,7 @@ function addProductRow(row) {
     '<td><input name="customer_value" value="' + esc(row.customer_value || "") + '"></td>' +
     '<td><input name="part_no_value" value="' + esc(row.part_no_value || "") + '"></td>' +
     '<td><input name="project_no_value" value="' + esc(row.project_no_value || "") + '"></td>' +
-    '<td><button onclick="removeRow(this)">删除</button></td>';
+    '<td><button class="delete-btn" onclick="removeRow(this)">删除</button></td>';
   document.getElementById("productTable").getElementsByTagName("tbody")[0].appendChild(tr);
 }
 function addMappingRow(row) {
@@ -205,7 +237,7 @@ function addMappingRow(row) {
     '<td><input name="target_sheet" value="' + esc(row.target_sheet || "Sheet1") + '"></td>' +
     '<td><input name="target_cell" value="' + esc(row.target_cell || "B2") + '"></td>' +
     '<td><input name="header_row" value="' + esc(row.header_row || "1") + '"></td>' +
-    '<td><button onclick="removeRow(this)">删除</button></td>';
+    '<td><button class="delete-btn" onclick="removeRow(this)">删除</button></td>';
   document.getElementById("mappingTable").getElementsByTagName("tbody")[0].appendChild(tr);
   tr.getElementsByTagName("select")[0].value = op;
 }
